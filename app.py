@@ -1,19 +1,10 @@
-from cProfile import run
+from statistics import mean
 import streamlit as st
 import pandas as pd
 import numpy as np
-import random
 import pickle as pkl
-import plotly.express as px
 from plotly import graph_objects as go
-
-st.title('Machine Learning Algorithms')
-
-@st.cache
-def load_trained_models():
-    linear = pkl.load(open('linear.pkl'))
-    random_forest = pkl.load(open('random_forest.pkl', 'r'))
-    
+from sklearn.metrics import mean_squared_error
 
 # Define inputs
 data_relationship = st.selectbox(
@@ -68,8 +59,7 @@ fig1.add_trace(go.Scatter(x=dat['x'], y=dat['y'],
                     mode='markers',
                     name='True',
                     marker=scatter_dict))
-st.plotly_chart(fig1)
-st.text(f'Fig 1. Modeled Predictions for {model_1_type} model')
+
 fig2 = go.Figure()
 fig2.add_trace(go.Scatter(x=dat['x'], y=model_2_pred,
                     mode='lines',
@@ -79,7 +69,38 @@ fig2.add_trace(go.Scatter(x=dat['x'], y=dat['y'],
                     mode='markers',
                     name='True',
                     marker=scatter_dict))
+
+# col1, col2 = st.columns([4,2])
+# with col1:
+# with col2:
+
+
+# Error table 
+def root_mean_squared_error(y_true, y_pred):
+    return mean_squared_error(y_true, y_pred) ** (1/2)
+
+metrics = [mean_squared_error, root_mean_squared_error] # Easy to add additional metrics
+table = []
+for metric in metrics:
+    output = {}
+    output[model_1_type] = metric(dat['y'], model_1_pred)
+    output[model_2_type] = metric(dat['y'], model_2_pred)
+    df = pd.DataFrame(output, index=[metric.__name__])
+    table.append(df)
+table = pd.concat(table)
+
+note_text = '''
+Notes:  
+Models are trained on 1,000 observations of a given relationship and tested on another 1,000 observations with a standardized relationship.  
+Gaussian noise is introduced to both (error with a mean of 0).  
+All models have a single independent variable. This makes it easier to visualize the relationships in the data.  
+'''
+# Render outputs:
+st.title('Machine Learning Algorithms')
+st.plotly_chart(fig1)
+st.text(f'Fig 1. Modeled Predictions for {model_1_type} model')
 st.plotly_chart(fig2)
 st.text(f'Fig 2. Modeled Predictions for {model_2_type} model')
-# 
-st.text('Table 1. Error Metrics')
+st.header('Table 1. Error Metrics')
+st.dataframe(table.style.format("{:.2f}")) # Format to 2 decimals places 
+st.markdown(note_text)
